@@ -1,0 +1,37 @@
+name: Build Revit add-in
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Restore
+        run: dotnet restore RevitPointCloudMCP.csproj
+
+      - name: Build (Release)
+        run: dotnet build RevitPointCloudMCP.csproj -c Release --no-restore
+
+      - name: Stage add-in package
+        shell: pwsh
+        run: |
+          $out = "package/RevitPointCloudMCP"
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+          Copy-Item "bin/Release/net8.0-windows/RevitPointCloudMCP.dll" $out
+          Copy-Item "RevitPointCloudMCP.addin" "package/"
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: RevitPointCloudMCP
+          path: package/
