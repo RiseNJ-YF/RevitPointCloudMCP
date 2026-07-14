@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<RevitAddIns>
+  <AddIn Type="Application">
+    <Name>Point Cloud MCP Bridge</Name>
+    <Assembly>RevitPointCloudMCP\RevitPointCloudMCP.dll</Assembly>
+    <AddInId>2F1B6C2E-9A3D-4E7F-8B2A-1C4D5E6F7A8B</AddInId>
+    <FullClassName>RevitPointCloudMCP.App</FullClassName>
+    <VendorId>RISA</VendorId>
+    <VendorDescription>RIS Architecture, yaakov@risearchitecture.com</VendorDescription>
+  </AddIn>
+</RevitAddIns>
