@@ -1,20 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!-- Revit 2025/2026 both run on .NET 8. If you're targeting Revit 2022-2024,
-         change this to net48 and swap the package versions below to match
-         (e.g. 2024.*). See README.md "Targeting an older Revit version". -->
-    <TargetFramework>net8.0-windows</TargetFramework>
+    <!-- Builds for both Revit 2026 (.NET 8) and Revit 2027 (.NET 10 - Autodesk
+         moved the runtime up in the 2027 release). `dotnet build` with no -f flag
+         builds both; each produces its own bin/Release/<tfm>/ output. -->
+    <TargetFrameworks>net8.0-windows;net10.0-windows</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <LangVersion>latest</LangVersion>
     <PlatformTarget>x64</PlatformTarget>
     <UseWindowsForms>false</UseWindowsForms>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
-
-    <!-- The version of Revit these packages/APIs correspond to. Bump this (and
-         the PackageReference versions below) to target a different year. -->
-    <RevitVersion>2026</RevitVersion>
 
     <AssemblyName>RevitPointCloudMCP</AssemblyName>
     <RootNamespace>RevitPointCloudMCP</RootNamespace>
@@ -23,6 +19,15 @@
          Revit already has them loaded. The Nice3point packages are published as
          reference-only assemblies, so this is mostly a safety net. -->
     <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+
+  <!-- Which Revit year each target framework corresponds to - drives both the
+       Nice3point package version below and the local-dev deploy folder. -->
+  <PropertyGroup Condition="'$(TargetFramework)'=='net8.0-windows'">
+    <RevitVersion>2026</RevitVersion>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(TargetFramework)'=='net10.0-windows'">
+    <RevitVersion>2027</RevitVersion>
   </PropertyGroup>
 
   <ItemGroup>
@@ -39,7 +44,8 @@
 
   <!-- Local dev convenience: after building, drop the DLL + .addin manifest straight
        into Revit's per-version Addins folder so Revit picks it up on next launch.
-       Safe to delete this target if you'd rather copy files by hand or via CI. -->
+       Runs once per target framework, landing in that TFM's own $(RevitVersion)
+       folder. Safe to delete this target if you'd rather copy files by hand or via CI. -->
   <Target Name="DeployToRevitAddinsFolder" AfterTargets="Build" Condition="'$(Configuration)'=='Debug'">
     <PropertyGroup>
       <RevitAddinsDir>$(AppData)\Autodesk\Revit\Addins\$(RevitVersion)\RevitPointCloudMCP\</RevitAddinsDir>

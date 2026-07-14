@@ -52,36 +52,56 @@ below for where to add them; the pattern is the same for all of them.
 
 ## Prerequisites
 
-- Revit 2025 or 2026 (targets .NET 8 - see below for older versions)
-- .NET 8 SDK (only needed if building locally; GitHub Actions handles this
+- Revit 2026 or 2027 (see below for older versions)
+- .NET 8 SDK and/or .NET 10 SDK, matching whichever Revit version(s) you're
+  building for (only needed if building locally; GitHub Actions handles both
   for you if you'd rather not install anything on a locked-down machine)
 - Your point cloud already linked into the model the normal way
   (Insert tab -> Point Cloud, pointing at the ReCap-indexed `.rcp`/`.rcs`
   file from your SiteWalk 360 / Insta360 SLAM export)
 
+Revit 2027 (released ~April 2026) moved from .NET 8 to .NET 10, so this
+project multi-targets both: `net8.0-windows` for Revit 2026, `net10.0-windows`
+for Revit 2027. One `dotnet build` produces both outputs.
+
+Worth knowing: Revit 2027 ships its own official Autodesk Assistant and a
+public MCP server built into the product. From what's public about it so far,
+its tool groups cover model queries, sheets, rooms, schedules, exports, and
+element operations - nothing for point clouds or wall/floor/ceiling creation
+from scan data, so this add-in still covers ground the built-in one doesn't.
+Worth keeping an eye on as it matures, though.
+
 ## Build
 
 **Locally (Visual Studio 2022+):** open `RevitPointCloudMCP.csproj`, build in
-`Debug` config. The `.csproj` has a post-build step that copies the DLL and
-`.addin` manifest straight into
-`%AppData%\Autodesk\Revit\Addins\2026\` for you.
+`Debug` config. Because the project multi-targets both Revit years, this
+builds two DLLs (`bin/Debug/net8.0-windows/` and `bin/Debug/net10.0-windows/`)
+in one go. The `.csproj` has a post-build step that copies each one, with its
+`.addin` manifest, straight into the matching
+`%AppData%\Autodesk\Revit\Addins\2026\` / `...\2027\` folder for you.
+
+If you only have one of the two SDKs installed, `dotnet build` will fail on
+the target framework you're missing - install the matching .NET SDK, or
+temporarily remove the other entry from `<TargetFrameworks>` in the `.csproj`.
 
 **GitHub Actions (locked-down machine):** push this repo, the workflow in
-`.github/workflows/build.yml` builds on `windows-latest` and uploads a
-`RevitPointCloudMCP` artifact zip - download it and extract both files into
-`%AppData%\Autodesk\Revit\Addins\2026\` (the `.addin` file goes directly in
-that folder; the `.dll` goes in a `RevitPointCloudMCP\` subfolder next to it,
-matching the path in the `.addin` manifest).
+`.github/workflows/build.yml` builds on `windows-latest` with both .NET 8 and
+.NET 10 installed, and uploads a `RevitPointCloudMCP` artifact zip containing
+two folders, `Revit2026/` and `Revit2027/` - each already laid out to match
+Revit's own Addins folder, so you can extract the one you need straight into
+`%AppData%\Autodesk\Revit\Addins\2026\` or `...\2027\`.
 
 ### Targeting an older Revit version
 
-If you're on Revit 2022-2024 (.NET Framework 4.8, not .NET 8):
-1. In `RevitPointCloudMCP.csproj`, change `<TargetFramework>net8.0-windows</TargetFramework>`
-   to `<TargetFramework>net48</TargetFramework>`, remove `<ImplicitUsings>`/`<Nullable>`
-   if you don't want them, and change `<RevitVersion>2026</RevitVersion>` to your version.
-2. `Element.Id.Value` (a `long`) was introduced in the 2024 API; on older
-   versions use `.IntegerValue` (an `int`) instead, in `Args.cs` and every
-   `Tools/*.cs` file that does `xyz.Id.Value`.
+If you're on Revit 2022-2024 (.NET Framework 4.8, not .NET 8/10):
+1. In `RevitPointCloudMCP.csproj`, add `net48` to `<TargetFrameworks>` (or
+   replace the list entirely if you don't need 2026/2027 too), and add a
+   matching conditional `<PropertyGroup Condition="'$(TargetFramework)'=='net48'">`
+   with `<RevitVersion>2024</RevitVersion>` (or your version) inside it,
+   following the same pattern as the net8.0-windows/net10.0-windows blocks.
+2. `Element.Id.Value` (a `long`) was introduced in the 2024 API; on versions
+   older than that, use `.IntegerValue` (an `int`) instead, in `Args.cs` and
+   every `Tools/*.cs` file that does `xyz.Id.Value`.
 3. `required` properties (`Geometry/RansacPlaneSegmentation.cs`) need C# 11+;
    on `net48` add `<LangVersion>11</LangVersion>` or rewrite those as normal
    settable properties with a constructor.
